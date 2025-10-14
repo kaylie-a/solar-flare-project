@@ -63,3 +63,12 @@ Solar flare prediction using time-series transformers
 =======
 # solar-flare-project
 >>>>>>> 175cd638837bcf277ff5b214a8adb30bef132106
+
+# Data Directory
+
+## Source
+The dataset used for this project is the SWAN-SF solar flare dataset.  
+Original repository: [https://github.com/samresume/Cleaned-SWANSF-Dataset](https://github.com/samresume/Cleaned-SWANSF-Dataset)
+
+## Local Setup
+Download the data and place it in: \solar-flare-project\data\raw
