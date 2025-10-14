@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # SOLAR-FLARE-PROJECT
 
 <a target="_blank" href="https://cookiecutter-data-science.drivendata.org/">
@@ -59,3 +60,6 @@ Solar flare prediction using time-series transformers
 
 --------
 
+=======
+# solar-flare-project
+>>>>>>> 175cd638837bcf277ff5b214a8adb30bef132106
