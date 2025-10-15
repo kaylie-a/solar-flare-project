@@ -195,4 +195,28 @@ cython_debug/
 .ruff_cache/
 
 # PyPI configuration file
-.pypirc
+.pypirc.venv*
+
+# Python virtual environments
+.venv*/
+venv/
+.env/
+
+# Local ROCm wheel installers
+*.whl
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Jupyter notebooks + temp
+.ipynb_checkpoints/
+*.log
+*.tmp
+
+# Data / models / outputs
+data/
+outputs/
+models/
+logs/
