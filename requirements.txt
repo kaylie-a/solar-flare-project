@@ -7,11 +7,8 @@ numpy
 pandas
 scikit-learn
 tqdm
-<<<<<<< HEAD
-=======
 typer
 -e .
 torch==2.8.0         # for CPU users
 # torch==2.8.0+rocm7.0.2.git245bf6ed  (for ROCm users)
 
->>>>>>> 9823664af1275b171047613d1e8f2eff2b35cfc9
