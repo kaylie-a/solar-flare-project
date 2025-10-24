@@ -1,1 +1,0 @@
-from solar_flare_project.config import MODELS_DIR, PROCESSED_DATA_DIR
