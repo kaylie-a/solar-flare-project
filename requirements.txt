@@ -1,3 +1,5 @@
+datasets
+evaulate
 ipython
 jupyterlab
 loguru
@@ -12,5 +14,6 @@ python-dotenv
 ruff
 scikit-learn
 tqdm
+transformers
 typer
 -e .
