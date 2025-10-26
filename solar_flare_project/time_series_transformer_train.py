@@ -3,50 +3,85 @@ import numpy as np
 import os
 import json
 import tensorflow.keras as tf
+from sklearn.metrics import precision_score, recall_score, f1_score, confusion_matrix
+import seaborn as sns
+import matplotlib.pyplot as plt
 
-# Add shuffling later
+# TODO: Add time-series data shuffling
 
 # Reshape data for the transformer (batch_size, time_steps, features)
 def reshape_data(x):
     return x.reshape((x.shape[0], x.shape[1], x.shape[2]))
 
-def time_series_transformer_model(input_shape, num_classes=2):
+# Encoder part of the Time-Series Transformer
+def time_series_encoder(input_shape, num_classes=2):
+    # Normalize input layer
     inputs = tf.Input(input_shape)
-    
-    # Normalize the time-series inputs
     x = tf.layers.LayerNormalization(epsilon=0.000001)(inputs)
     
-    # Time-Series Transformer block 
-    transformer_block = tf.layers.MultiHeadAttention(
-        num_heads=8, 
-        key_dim=64, 
+    # Time-Series Encoder block 
+    encoder_block = tf.layers.MultiHeadAttention(
+        num_heads=8,
+        key_dim=64,
         dropout=0.1
         )(x, x)
-    transformer_block = tf.layers.Dropout(0.1)(transformer_block)
+    encoder_block = tf.layers.Dropout(0.1)(encoder_block)
     # Residual block (add input to previous block)
-    transformer_block = tf.layers.LayerNormalization(epsilon=0.000001)(transformer_block + x)
+    encoder_block = tf.layers.LayerNormalization(epsilon=0.000001)(encoder_block + x)
     
     # Feed-Forward network
-    x = tf.layers.GlobalAveragePooling1D()(transformer_block)
+    x = tf.layers.GlobalMaxPooling1D()(encoder_block)
     x = tf.layers.Dense(64, activation='relu')(x)
     x = tf.layers.Dropout(0.5)(x)
     output = tf.layers.Dense(num_classes, activation='softmax')(x)
     
     # Create model
-    model = tf.Model(inputs, output)
-    model.compile(
-        optimizer=tf.optimizers.Adam(),
+    encoder_model = tf.Model(inputs, output)
+    encoder_model.compile(
+        optimizer=tf.optimizers.Adam(),             # Backpropagation
         loss='sparse_categorical_crossentropy',
         metrics=['accuracy']
         )
     
-    return model
+    return encoder_model
+
+# Calculate TSS Score
+def calc_tss(y_true, predictions):
+    conf_mat = confusion_matrix(y_true, predictions)
+    true_neg, false_pos, false_neg, true_pos = conf_mat.ravel()
+    tss = (true_pos / (true_pos + false_neg)) - (false_pos / (false_pos + true_neg))
+    return tss
+
+# TODO: fix hardcoding
+def save_confusion_matrix(y_true, predictions):
+    conf_mat = confusion_matrix(y_true, predictions)
+
+    plt.figure(figsize=(6, 5))
+    sns.heatmap(
+        conf_mat, 
+        annot=True, 
+        fmt='d', 
+        cmap='Blues', 
+        cbar=True, 
+        xticklabels=['Class M', 'Class X'], 
+        yticklabels=['Class M', 'Class X']
+        )
+    plt.title('Pair 1:1')
+    plt.xlabel('Predicted')
+    plt.ylabel('True')
+    plt.savefig('C:/GitHub/solar-flare-project/reports/figures/pair_1_1.png')
+    plt.close()
+
+# =====================================================================
 
 os.makedirs(MODELS_DIR, exist_ok=True)
 os.makedirs(HISTORY_DIR, exist_ok=True)
 
-# Save models
-for i in range(1):
+# Training Partitions
+for i in range(NUM_PARTITIONS):
+    print(f'\nTraining Partition {i + 1}')
+    print('=====================================================================')
+
     # Load training data
     current_train = np.load(f'{PARTITIONS_DIR}/train{i + 1}_test1.npz')
     x_train = current_train['x_train']
@@ -56,13 +91,13 @@ for i in range(1):
     x_train = reshape_data(x_train)
 
     # Create Time Series Transformer model
-    model = time_series_transformer_model((NUM_TIMESTEPS, NUM_FEATURES))
+    model = time_series_encoder((NUM_TIMESTEPS, NUM_FEATURES))
     
     # Train the model
     history = model.fit(
         x_train, 
         y_train, 
-        epochs=5,
+        epochs=30,
         batch_size=32, 
         verbose=1
     )
@@ -72,10 +107,11 @@ for i in range(1):
     history_output = f'{HISTORY_DIR}/history_{i + 1}.json'
     with open(history_output, 'w') as file:
         json.dump(history.history, file)
-    
-    # TODO: move to separate file later
+
+    model.summary()
+
     # Test on different partitions
-    for j in range(1):
+    for j in range(NUM_PARTITIONS):
         # Load testing partition
         current_test = np.load(f'{PARTITIONS_DIR}/train{i + 1}_test{j + 1}.npz')
         x_test = current_test['x_test']
@@ -85,5 +121,23 @@ for i in range(1):
         x_test = reshape_data(x_test)
 
         # Evaluate the model
+        print(f'\nTesting Partition {j + 1}')
+
+        predictions = model.predict(x_test)
+        predictions = np.argmax(predictions, axis=1)
+        
+        # Loss and accuracy
         loss, accuracy = model.evaluate(x_test, y_test)
-        print(f"Loss: {loss:.4f}, Accuracy: {accuracy:.4f}")
+
+        # Precision, Recall, F1-Score, TSS
+        precision = precision_score(y_test, predictions, average='weighted')
+        recall = recall_score(y_test, predictions, average='weighted')
+        f1 = f1_score(y_test, predictions, average='weighted')
+        tss = calc_tss(y_test, predictions)
+
+        # Save first confusion matrix
+        if i + 1 == 1 and j + 1 == 1:
+            save_confusion_matrix(y_test, predictions)
+        
+        print(f'Loss: {loss:.4f}, Accuracy: {accuracy:.4f}, Precision: {precision:.4f}, Recall: {recall:.4f}, F1-Score: {f1:.4f}, TSS: {tss:.4f}')
+

@@ -16,3 +16,4 @@ transformers
 tensorflow
 scikit-learn
 simplejson
+seaborn
