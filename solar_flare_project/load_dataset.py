@@ -74,6 +74,19 @@ def count_class_distributions(labels):
 
         print(f'Partition {i + 1} - Class M: {class_0_count}, Class X: {class_1_count}')
 
+# Count class distribution for a single partition
+def count_class_distribution_single(labels):
+    class_0_count = 0
+    class_1_count = 0
+
+    for i in range(len(labels)):
+        if labels[i] == 0.0:
+            class_0_count += 1
+        else:
+            class_1_count += 1
+
+    print(f'Partition {i + 1} - Class M: {class_0_count}, Class X: {class_1_count}')
+
 # Display info about the dataset
 def print_dataset_info(x_train, y_train, x_test, y_test):
     
@@ -92,6 +105,22 @@ def print_dataset_info(x_train, y_train, x_test, y_test):
 
     print('\n----- Testing Class Distribution -----')
     count_class_distributions(y_test)
+
+# Display info for a specific partition pair
+def print_partition_info(x_train, y_train, x_test, y_test):
+    print('\t\t\tNum samples')
+    print('x_train (data):\t\t', len(x_train))
+    print('y_train (labels):\t', len(y_train))
+    print('-------------------------------------------------------')
+    print('x_test (data):\t\t', len(x_test))
+    print('y_test (labels):\t', len(y_test))
+
+    # Count class label distributions
+    print('\n----- Training Class Distribution -----')
+    count_class_distribution_single(y_train)
+
+    print('\n----- Testing Class Distribution -----')
+    count_class_distribution_single(y_test)
 
 # Plot time-series data for different features of one sample
 def plot_timeseries_data(sample, list_features, title, example_index=0):
