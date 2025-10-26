@@ -81,20 +81,22 @@ def save_confusion_matrix(y_true, predictions):
 # Split testing set into validation and testing
 def split_val_test(x_testing, y_testing):
 
-    random.shuffle(y_testing)
-    indices = int(len(y_testing) * 0.5)
+    indices = np.random.permutation(len(y_testing))
+    
+    # Split into validation and test sets
+    split_indices = int(len(y_testing) * 0.5)
 
-    y_val = y_testing[:indices]
-    y_test = y_testing[indices:]
+    val_indices = indices[:split_indices]   
+    test_indices = indices[split_indices:]
+    
+    # Use the indices to get the corresponding data
+    x_val = x_testing[val_indices, :, :]
+    y_val = y_testing[val_indices]
+    x_test = x_testing[test_indices, :, :]
+    y_test = y_testing[test_indices]
 
     #print(f'y_val: {len(y_val)}')
     #print(f'y_test: {len(y_test)}')
-
-    val_indices = np.argsort(y_testing)[:indices]
-    test_indices = np.argsort(y_testing)[indices:]
-    x_val = x_testing[val_indices, :, :]
-    x_test = x_testing[test_indices, :, :]
-
     #print(f'x_val: {len(x_val)}')
     #print(f'x_test: {len(x_test)}')
 
@@ -138,6 +140,8 @@ for i in range(NUM_PARTITIONS):
         x_test = reshape_data(x_test)
 
         # Train the model
+        print(f'\nTesting Partition {j + 1}')
+        
         history = model.fit(
             x_train, 
             y_train, 
@@ -154,8 +158,6 @@ for i in range(NUM_PARTITIONS):
             json.dump(history.history, file)
 
         # Evaluate the model
-        print(f'\nTesting Partition {j + 1}')
-
         predictions = model.predict(x_test)
         predictions = np.argmax(predictions, axis=1)
         
