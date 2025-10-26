@@ -2,10 +2,13 @@ from config import PARTITIONS_DIR, MODELS_DIR, HISTORY_DIR, NUM_PARTITIONS, NUM_
 import numpy as np
 import os
 import json
+import random
+import matplotlib.pyplot as plt
+
 import tensorflow.keras as tf
 from sklearn.metrics import precision_score, recall_score, f1_score, confusion_matrix
 import seaborn as sns
-import matplotlib.pyplot as plt
+
 
 # TODO: Add time-series data shuffling
 
@@ -15,6 +18,7 @@ def reshape_data(x):
 
 # Encoder part of the Time-Series Transformer
 def time_series_encoder(input_shape, num_classes=2):
+
     # Normalize input layer
     inputs = tf.Input(input_shape)
     x = tf.layers.LayerNormalization(epsilon=0.000001)(inputs)
@@ -47,6 +51,7 @@ def time_series_encoder(input_shape, num_classes=2):
 
 # Calculate TSS Score
 def calc_tss(y_true, predictions):
+    
     conf_mat = confusion_matrix(y_true, predictions)
     true_neg, false_pos, false_neg, true_pos = conf_mat.ravel()
     tss = (true_pos / (true_pos + false_neg)) - (false_pos / (false_pos + true_neg))
@@ -54,13 +59,14 @@ def calc_tss(y_true, predictions):
 
 # TODO: fix hardcoding
 def save_confusion_matrix(y_true, predictions):
+
     conf_mat = confusion_matrix(y_true, predictions)
 
     plt.figure(figsize=(6, 5))
     sns.heatmap(
         conf_mat, 
         annot=True, 
-        fmt='d', 
+        fmt='d',
         cmap='Blues', 
         cbar=True, 
         xticklabels=['Class M', 'Class X'], 
@@ -71,6 +77,29 @@ def save_confusion_matrix(y_true, predictions):
     plt.ylabel('True')
     plt.savefig('C:/GitHub/solar-flare-project/reports/figures/pair_1_1.png')
     plt.close()
+
+# Split testing set into validation and testing
+def split_val_test(x_testing, y_testing):
+
+    random.shuffle(y_testing)
+    indices = int(len(y_testing) * 0.5)
+
+    y_val = y_testing[:indices]
+    y_test = y_testing[indices:]
+
+    #print(f'y_val: {len(y_val)}')
+    #print(f'y_test: {len(y_test)}')
+
+    val_indices = np.argsort(y_testing)[:indices]
+    test_indices = np.argsort(y_testing)[indices:]
+    x_val = x_testing[val_indices, :, :]
+    x_test = x_testing[test_indices, :, :]
+
+    #print(f'x_val: {len(x_val)}')
+    #print(f'x_test: {len(x_test)}')
+
+    return x_val, y_val, x_test, y_test
+
 
 # =====================================================================
 
@@ -92,33 +121,37 @@ for i in range(NUM_PARTITIONS):
 
     # Create Time Series Transformer model
     model = time_series_encoder((NUM_TIMESTEPS, NUM_FEATURES))
-    
-    # Train the model
-    history = model.fit(
-        x_train, 
-        y_train, 
-        epochs=30,
-        batch_size=32, 
-        verbose=1
-    )
-
-    # Save the model and history
-    model.save(f'{MODELS_DIR}/time_series_model_{i + 1}.h5')
-    history_output = f'{HISTORY_DIR}/history_{i + 1}.json'
-    with open(history_output, 'w') as file:
-        json.dump(history.history, file)
-
     model.summary()
 
     # Test on different partitions
     for j in range(NUM_PARTITIONS):
         # Load testing partition
         current_test = np.load(f'{PARTITIONS_DIR}/train{i + 1}_test{j + 1}.npz')
-        x_test = current_test['x_test']
-        y_test = current_test['y_test']
+        x_testing = current_test['x_test']
+        y_testing = current_test['y_test']
         
-        # Preprocess and reshape testing data
+        # Shuffle and split testing into two sets without reusing values
+        x_val, y_val, x_test, y_test = split_val_test(x_testing, y_testing)
+
+        # Reshape validation and testing data
+        x_val = reshape_data(x_val)
         x_test = reshape_data(x_test)
+
+        # Train the model
+        history = model.fit(
+            x_train, 
+            y_train, 
+            epochs=30,
+            batch_size=32, 
+            validation_data=(x_val, y_val),
+            verbose=1
+        )
+
+        # Save the model and history
+        model.save(f'{MODELS_DIR}/time_series_model_{i + 1}_{j + 1}.h5')
+        history_output = f'{HISTORY_DIR}/history_{i + 1}_{j + 1}.json'
+        with open(history_output, 'w') as file:
+            json.dump(history.history, file)
 
         # Evaluate the model
         print(f'\nTesting Partition {j + 1}')
@@ -140,4 +173,3 @@ for i in range(NUM_PARTITIONS):
             save_confusion_matrix(y_test, predictions)
         
         print(f'Loss: {loss:.4f}, Accuracy: {accuracy:.4f}, Precision: {precision:.4f}, Recall: {recall:.4f}, F1-Score: {f1:.4f}, TSS: {tss:.4f}')
-
