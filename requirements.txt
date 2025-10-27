@@ -11,4 +11,9 @@ typer
 -e .
 torch==2.8.0         # for CPU users
 # torch==2.8.0+rocm7.0.2.git245bf6ed  (for ROCm users)
-
+datasets
+transformers
+tensorflow
+scikit-learn
+simplejson
+seaborn
