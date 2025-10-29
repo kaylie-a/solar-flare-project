@@ -2,7 +2,6 @@ from config import DATASET_DIR, NUM_PARTITIONS, NUM_TIMESTEPS, FEATURE_NAMES
 import pickle as pkl
 import matplotlib.pyplot as plt
 import numpy as np
-import os, sys
 
 training_dir = DATASET_DIR + '/train'
 testing_dir = DATASET_DIR + '/test'
@@ -62,30 +61,22 @@ def load_data(training_dir=training_dir, testing_dir=testing_dir):
 def count_class_distributions(labels):
 
     for i in range(NUM_PARTITIONS):
-        class_0_count = 0
-        class_1_count = 0
+        # Convert to numpy array
+        labels_np = np.array(labels[i])
 
-        for j in range(len(labels[i])):
-            if labels[i][j] == 0.0:
-                class_0_count += 1
-            else:
-                class_1_count += 1
+        # Count class distributions
+        class_M_count = len(np.where(labels_np == 0)[0])
+        class_X_count = len(np.where(labels_np == 1)[0])
 
-        print(f'Partition {i + 1} - Class M: {class_0_count}, Class X: {class_1_count}')
+        print(f'Partition {i + 1} - Class M: {class_M_count}, Class X: {class_X_count}')
 
 # Count class distribution for a single partition
 def count_class_distribution_single(labels):
 
-    class_0_count = 0
-    class_1_count = 0
+    class_M_count = len(np.where(labels == 0)[0])
+    class_X_count = len(np.where(labels == 1)[0])
 
-    for i in range(len(labels)):
-        if labels[i] == 0.0:
-            class_0_count += 1
-        else:
-            class_1_count += 1
-
-    print(f'Class M: {class_0_count}, Class X: {class_1_count}')
+    print(f'Class M: {class_M_count}, Class X: {class_X_count}')
 
 # Display info about the dataset
 def print_dataset_info(x_train, y_train, x_test, y_test):
@@ -123,25 +114,43 @@ def print_partition_info(x_train, y_train, x_test, y_test):
     print('\n----- Testing Class Distribution -----')
     count_class_distribution_single(y_test)
 
-# Plot time-series data for different features of one sample
-def plot_timeseries_data(sample, list_features, title, example_index=0):
+# Split testing set into validation and testing
+def split_val_test(x_testing, y_testing):
+
+    # Shuffle indices from each class
+    M_indices = np.where(y_testing == 0)[0]
+    X_indices = np.where(y_testing == 1)[0]
+    np.random.shuffle(M_indices)
+    np.random.shuffle(X_indices)
     
-    num_features = len(list_features)
-    timesteps = np.arange(NUM_TIMESTEPS)
+    # Split indices into validation and testing
+    split_M = len(M_indices) // 2
+    split_X = len(X_indices) // 2
 
-    plt.figure(figsize=(7, 5))  # 10, 15 for full
+    # Validation set
+    x_val_M = M_indices[:split_M]
+    x_val_X = X_indices[:split_X]
+    val_indices = np.concatenate([x_val_M, x_val_X])
 
-    for i in range(num_features):
-        plt.plot(timesteps, sample[example_index,:,list_features[i]], label=FEATURE_NAMES[list_features[i]])
-
-    plt.xlabel('Timesteps')
-    plt.ylabel('Values')
-    plt.title(title)
-    plt.legend()
+    # Testing set
+    y_val_M = M_indices[split_M:]
+    y_val_X = X_indices[split_X:]
+    test_indices = np.concatenate([y_val_M, y_val_X])
     
-    output_path = f'C:/GitHub/solar-flare-project/reports/figures/timeseries_example_small_{example_index}.png'
-    plt.savefig(output_path)
-    plt.close()
+    # Get final validation and testing sets
+    x_val = x_testing[val_indices, :, :]
+    y_val = y_testing[val_indices]
+    x_test = x_testing[test_indices, :, :]
+    y_test = y_testing[test_indices]
+
+    # Print class distribution
+    print_partition_info(x_val, y_val, x_test, y_test)
+
+    return x_val, y_val, x_test, y_test
+
+# Reshape data for the transformer (batch_size, time_steps, features)
+def reshape_data(x):
+    return x.reshape((x.shape[0], x.shape[1], x.shape[2]))
 
 # Example - print info
 #x_train, y_train, x_test, y_test = load_data()

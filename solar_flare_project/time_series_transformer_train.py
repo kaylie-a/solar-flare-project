@@ -1,5 +1,5 @@
 from config import PARTITIONS_DIR, MODELS_DIR, HISTORY_DIR, RESULTS_DIR, NUM_PARTITIONS, NUM_TIMESTEPS, NUM_FEATURES
-from load_dataset import print_partition_info
+from load_dataset import print_partition_info, split_val_test, reshape_data
 from plot_graphs import plot_confusion_matrix
 
 import numpy as np
@@ -13,10 +13,6 @@ from sklearn.metrics import precision_score, recall_score, f1_score, confusion_m
 
 
 # TODO: Add time-series data shuffling?
-
-# Reshape data for the transformer (batch_size, time_steps, features)
-def reshape_data(x):
-    return x.reshape((x.shape[0], x.shape[1], x.shape[2]))
 
 # Encoder part of the Time-Series Transformer
 def time_series_encoder(input_shape, num_classes=2):
@@ -64,56 +60,16 @@ def calc_tss(y_true, predictions):
     tss = (true_pos / (true_pos + false_neg)) - (false_pos / (false_pos + true_neg))
     return tss
 
-# Split testing set into validation and testing
-def split_val_test(x_testing, y_testing):
-
-    # Shuffle indices from each class
-    M_indices = np.where(y_testing == 0)[0]
-    X_indices = np.where(y_testing == 1)[0]
-    np.random.shuffle(M_indices)
-    np.random.shuffle(X_indices)
-    
-    # Split indices into validation and testing
-    split_M = len(M_indices) // 2
-    split_X = len(X_indices) // 2
-
-    # Validation set
-    x_val_M = M_indices[:split_M]
-    x_val_X = X_indices[:split_X]
-    val_indices = np.concatenate([x_val_M, x_val_X])
-
-    # Testing set
-    y_val_M = M_indices[split_M:]
-    y_val_X = X_indices[split_X:]
-    test_indices = np.concatenate([y_val_M, y_val_X])
-    
-    # Get final validation and testing sets
-    x_val = x_testing[val_indices, :, :]
-    y_val = y_testing[val_indices]
-    x_test = x_testing[test_indices, :, :]
-    y_test = y_testing[test_indices]
-
-    print(f'\nValidation length: {len(y_val)}')
-    print(f'Testing length: {len(y_test)}')
-
-    print(f'\nValidation Class M: {len(np.where(y_val == 0)[0])}')
-    print(f'Validation Class X: {len(np.where(y_val == 1)[0])}')
-    print(f'Testing Class X: {len(np.where(y_test == 0)[0])}')
-    print(f'Testing Class X: {len(np.where(y_test == 1)[0])}')
-
-    return x_val, y_val, x_test, y_test
-
-
 # =====================================================================
 
 os.makedirs(MODELS_DIR, exist_ok=True)
 os.makedirs(HISTORY_DIR, exist_ok=True)
 
-iteration = 0
+iteration = 3
 output_file = open(f"{RESULTS_DIR}/output_{iteration}.txt", "w")
 
 # Training Partitions
-for i in range(1):
+for i in range(NUM_PARTITIONS):
     print(f'\nTraining Partition {i + 1}')
     print('=====================================================================')
 
@@ -130,7 +86,7 @@ for i in range(1):
     model.summary()
 
     # Test on different partitions
-    for j in range(1):
+    for j in range(NUM_PARTITIONS):
         # Load testing partition
         current_test = np.load(f'{PARTITIONS_DIR}/train{i + 1}_test{j + 1}.npz')
         x_testing = current_test['x_test']
@@ -138,9 +94,6 @@ for i in range(1):
         
         # Shuffle and split testing into two sets without reusing values
         x_val, y_val, x_test, y_test = split_val_test(x_testing, y_testing)
-
-        # Print class distribution
-        #print_partition_info(x_val, y_val, x_test, y_test)
 
         # Reshape validation and testing data
         x_val = reshape_data(x_val)
@@ -152,7 +105,7 @@ for i in range(1):
         history = model.fit(
             x_train, 
             y_train, 
-            epochs=1,
+            epochs=20,
             batch_size=32, 
             validation_data=(x_val, y_val),
             verbose=1
