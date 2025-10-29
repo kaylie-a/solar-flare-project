@@ -1,4 +1,7 @@
-from config import PARTITIONS_DIR, MODELS_DIR, HISTORY_DIR, NUM_PARTITIONS, NUM_TIMESTEPS, NUM_FEATURES
+from config import PARTITIONS_DIR, MODELS_DIR, HISTORY_DIR, RESULTS_DIR, NUM_PARTITIONS, NUM_TIMESTEPS, NUM_FEATURES
+from load_dataset import print_partition_info, split_val_test, reshape_data
+from plot_graphs import plot_confusion_matrix
+
 import numpy as np
 import os
 import json
@@ -7,42 +10,60 @@ import matplotlib.pyplot as plt
 
 import tensorflow.keras as tf
 from sklearn.metrics import precision_score, recall_score, f1_score, confusion_matrix
-import seaborn as sns
 
 
-# TODO: Add time-series data shuffling
-
-# Reshape data for the transformer (batch_size, time_steps, features)
-def reshape_data(x):
-    return x.reshape((x.shape[0], x.shape[1], x.shape[2]))
+# TODO: Add time-series data shuffling?
 
 # Encoder part of the Time-Series Transformer
-def time_series_encoder(input_shape, num_classes=2):
+def time_series_encoder(input_shape, num_classes=2, num_layers=4):
 
     # Normalize input layer
     inputs = tf.Input(input_shape)
     x = tf.layers.LayerNormalization(epsilon=0.000001)(inputs)
     
-    # Time-Series Encoder block 
-    encoder_block = tf.layers.MultiHeadAttention(
-        num_heads=8,
-        key_dim=64,
-        dropout=0.1
-        )(x, x)
-    encoder_block = tf.layers.Dropout(0.1)(encoder_block)
-    # Residual block (add input to previous block)
-    encoder_block = tf.layers.LayerNormalization(epsilon=0.000001)(encoder_block + x)
+    for i in range(num_layers):
+        # Attention unit
+        attention_unit = tf.layers.MultiHeadAttention(
+            num_heads=8,
+            key_dim=64,
+            dropout=0.1,
+            name=f'attention_unit_{i}'
+            )(x, x)
+        attention_unit = tf.layers.Dropout(0.1)(attention_unit)
+
+        # Residual block (add input to previous block)
+        attention_unit = tf.layers.LayerNormalization(
+            epsilon=0.000001,
+            name=f'attention_normalize_{i}'
+            )(attention_unit + x)
+        attention_unit = tf.layers.ReLU(
+            name=f'attention_relu_{i}'
+            )(attention_unit)
     
-    # Feed-Forward network
-    x = tf.layers.GlobalMaxPooling1D()(encoder_block)
-    x = tf.layers.Dense(64, activation='relu')(x)
-    x = tf.layers.Dropout(0.5)(x)
+        # Feed-Forward Network
+        ffn_unit = tf.layers.Dense(
+            128, 
+            activation='relu', 
+            name=f'ffn_dense_{i}'
+            )(attention_unit)
+        ffn_unit = tf.layers.Dropout(
+            0.6,
+            name=f'ffn_dropout_{i}'
+            )(ffn_unit)
+
+        x = ffn_unit
+
+    # Apply pooling to condense
+    x = tf.layers.GlobalMaxPooling1D()(x)
+
+    # Add and normalize before output
+    x = tf.layers.LayerNormalization(epsilon=0.000001)(x)
     output = tf.layers.Dense(num_classes, activation='softmax')(x)
     
-    # Create model
+    # Create and compile model
     encoder_model = tf.Model(inputs, output)
     encoder_model.compile(
-        optimizer=tf.optimizers.Adam(),             # Backpropagation
+        optimizer=tf.optimizers.Adam(learning_rate=0.0001),
         loss='sparse_categorical_crossentropy',
         metrics=['accuracy']
         )
@@ -57,56 +78,13 @@ def calc_tss(y_true, predictions):
     tss = (true_pos / (true_pos + false_neg)) - (false_pos / (false_pos + true_neg))
     return tss
 
-# TODO: fix hardcoding
-def save_confusion_matrix(y_true, predictions):
-
-    conf_mat = confusion_matrix(y_true, predictions)
-
-    plt.figure(figsize=(6, 5))
-    sns.heatmap(
-        conf_mat, 
-        annot=True, 
-        fmt='d',
-        cmap='Blues', 
-        cbar=True, 
-        xticklabels=['Class M', 'Class X'], 
-        yticklabels=['Class M', 'Class X']
-        )
-    plt.title('Pair 1:1')
-    plt.xlabel('Predicted')
-    plt.ylabel('True')
-    plt.savefig('C:/GitHub/solar-flare-project/reports/figures/pair_1_1.png')
-    plt.close()
-
-# Split testing set into validation and testing
-def split_val_test(x_testing, y_testing):
-
-    indices = np.random.permutation(len(y_testing))
-    
-    # Split into validation and test sets
-    split_indices = int(len(y_testing) * 0.5)
-
-    val_indices = indices[:split_indices]   
-    test_indices = indices[split_indices:]
-    
-    # Use the indices to get the corresponding data
-    x_val = x_testing[val_indices, :, :]
-    y_val = y_testing[val_indices]
-    x_test = x_testing[test_indices, :, :]
-    y_test = y_testing[test_indices]
-
-    #print(f'y_val: {len(y_val)}')
-    #print(f'y_test: {len(y_test)}')
-    #print(f'x_val: {len(x_val)}')
-    #print(f'x_test: {len(x_test)}')
-
-    return x_val, y_val, x_test, y_test
-
-
 # =====================================================================
 
 os.makedirs(MODELS_DIR, exist_ok=True)
 os.makedirs(HISTORY_DIR, exist_ok=True)
+
+iteration = 3
+output_file = open(f"{RESULTS_DIR}/output_{iteration}.txt", "w")
 
 # Training Partitions
 for i in range(NUM_PARTITIONS):
@@ -172,6 +150,10 @@ for i in range(NUM_PARTITIONS):
 
         # Save first confusion matrix
         if i + 1 == 1 and j + 1 == 1:
-            save_confusion_matrix(y_test, predictions)
+            plot_confusion_matrix(y_test, predictions, i + 1, j + 1, iteration)
         
         print(f'Loss: {loss:.4f}, Accuracy: {accuracy:.4f}, Precision: {precision:.4f}, Recall: {recall:.4f}, F1-Score: {f1:.4f}, TSS: {tss:.4f}')
+
+        # Write to output file
+        output_file.write(f'Pair {i + 1}:{j + 1} - Loss: {loss:.4f}, Accuracy: {accuracy:.4f}, Precision: {precision:.4f}, Recall: {recall:.4f}, F1-Score: {f1:.4f}, TSS: {tss:.4f}\n')
+        
