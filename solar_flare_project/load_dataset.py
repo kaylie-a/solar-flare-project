@@ -85,7 +85,7 @@ def count_class_distribution_single(labels):
         else:
             class_1_count += 1
 
-    print(f'Partition {i + 1} - Class M: {class_0_count}, Class X: {class_1_count}')
+    print(f'Class M: {class_0_count}, Class X: {class_1_count}')
 
 # Display info about the dataset
 def print_dataset_info(x_train, y_train, x_test, y_test):
@@ -143,6 +143,6 @@ def plot_timeseries_data(sample, list_features, title, example_index=0):
     plt.savefig(output_path)
     plt.close()
 
-# Print info
-x_train, y_train, x_test, y_test = load_data()
-print_dataset_info(x_train, y_train, x_test, y_test)
+# Example - print info
+#x_train, y_train, x_test, y_test = load_data()
+#print_dataset_info(x_train, y_train, x_test, y_test)

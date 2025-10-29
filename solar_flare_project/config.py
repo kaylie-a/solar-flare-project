@@ -3,6 +3,8 @@ DATASET_DIR = 'C:/GitHub/solar-flare-project/data/raw/Cleaned SWANSF Dataset'
 PARTITIONS_DIR = 'C:/GitHub/solar-flare-project/data_partitions'
 MODELS_DIR = 'C:/GitHub/solar-flare-project/training/models'
 HISTORY_DIR = 'C:/GitHub/solar-flare-project/training/history'
+FIGURES_DIR = 'C:/GitHub/solar-flare-project/reports/figures'
+RESULTS_DIR = 'C:/GitHub/solar-flare-project/reports/results'
 
 NUM_PARTITIONS = 5
 NUM_TIMESTEPS = 60
