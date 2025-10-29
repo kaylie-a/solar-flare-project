@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Data
 /data/
 
@@ -197,3 +198,10 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+=======
+venv/*
+.venv/*
+data/*
+solar_flare_project/__pycache__/*
+data_partitions/*
+>>>>>>> 1d0bbe9ca1bd6342aed0422795a19a7c3eb516a7

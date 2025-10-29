@@ -1,6 +1,9 @@
+<<<<<<< HEAD
 datasets
 evaulate
 ipython
+=======
+>>>>>>> 1d0bbe9ca1bd6342aed0422795a19a7c3eb516a7
 jupyterlab
 loguru
 matplotlib
@@ -8,12 +11,11 @@ mkdocs
 notebook
 numpy
 pandas
-pip
-pytest
-python-dotenv
-ruff
 scikit-learn
 tqdm
 transformers
 typer
 -e .
+torch==2.8.0         # for CPU users
+# torch==2.8.0+rocm7.0.2.git245bf6ed  (for ROCm users)
+
