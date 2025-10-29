@@ -15,28 +15,46 @@ from sklearn.metrics import precision_score, recall_score, f1_score, confusion_m
 # TODO: Add time-series data shuffling?
 
 # Encoder part of the Time-Series Transformer
-def time_series_encoder(input_shape, num_classes=2):
+def time_series_encoder(input_shape, num_classes=2, num_layers=4):
 
     # Normalize input layer
     inputs = tf.Input(input_shape)
     x = tf.layers.LayerNormalization(epsilon=0.000001)(inputs)
     
-    # Attention unit
-    encoder_block = tf.layers.MultiHeadAttention(
-        num_heads=8,
-        key_dim=64,
-        dropout=0.1
-        )(x, x)
-    encoder_block = tf.layers.Dropout(0.1)(encoder_block)
+    for i in range(num_layers):
+        # Attention unit
+        attention_unit = tf.layers.MultiHeadAttention(
+            num_heads=8,
+            key_dim=64,
+            dropout=0.1,
+            name=f'attention_unit_{i}'
+            )(x, x)
+        attention_unit = tf.layers.Dropout(0.1)(attention_unit)
 
-    # Residual block (add input to previous block)
-    encoder_block = tf.layers.LayerNormalization(epsilon=0.000001)(encoder_block + x)
-    encoder_block = tf.layers.ReLU()(encoder_block)
+        # Residual block (add input to previous block)
+        attention_unit = tf.layers.LayerNormalization(
+            epsilon=0.000001,
+            name=f'attention_normalize_{i}'
+            )(attention_unit + x)
+        attention_unit = tf.layers.ReLU(
+            name=f'attention_relu_{i}'
+            )(attention_unit)
     
-    # Feed-Forward network
-    x = tf.layers.GlobalMaxPooling1D()(encoder_block)
-    x = tf.layers.Dense(128, activation='relu')(x)
-    x = tf.layers.Dropout(0.6)(x)
+        # Feed-Forward Network
+        ffn_unit = tf.layers.Dense(
+            128, 
+            activation='relu', 
+            name=f'ffn_dense_{i}'
+            )(attention_unit)
+        ffn_unit = tf.layers.Dropout(
+            0.6,
+            name=f'ffn_dropout_{i}'
+            )(ffn_unit)
+
+        x = ffn_unit
+
+    # Apply pooling to condense
+    x = tf.layers.GlobalMaxPooling1D()(x)
 
     # Add and normalize before output
     x = tf.layers.LayerNormalization(epsilon=0.000001)(x)
@@ -105,7 +123,7 @@ for i in range(NUM_PARTITIONS):
         history = model.fit(
             x_train, 
             y_train, 
-            epochs=20,
+            epochs=30,
             batch_size=32, 
             validation_data=(x_val, y_val),
             verbose=1
