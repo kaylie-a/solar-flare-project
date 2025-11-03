@@ -1,74 +1,37 @@
-<<<<<<< HEAD
 # SOLAR-FLARE-PROJECT
-
-<a target="_blank" href="https://cookiecutter-data-science.drivendata.org/">
-    <img src="https://img.shields.io/badge/CCDS-Project%20template-328F97?logo=cookiecutter" />
-</a>
 
 Solar flare prediction using time-series transformers
 
 ## Project Organization
 
 ```
-├── LICENSE            <- Open-source license if one is chosen
-├── Makefile           <- Makefile with convenience commands like `make data` or `make train`
-├── README.md          <- The top-level README for developers using this project.
-├── data
-│   ├── external       <- Data from third party sources.
-│   ├── interim        <- Intermediate data that has been transformed.
-│   ├── processed      <- The final, canonical data sets for modeling.
-│   └── raw            <- The original, immutable data dump.
+├── LICENSE                
 │
-├── docs               <- A default mkdocs project; see www.mkdocs.org for details
+├── README.md
 │
-├── models             <- Trained and serialized models, model predictions, or model summaries
+├── requirements.txt       <- Install required libraries for environment
 │
-├── notebooks          <- Jupyter notebooks. Naming convention is a number (for ordering),
-│                         the creator's initials, and a short `-` delimited description, e.g.
-│                         `1.0-jqp-initial-data-exploration`.
+├── notebooks              <-
 │
-├── pyproject.toml     <- Project configuration file with package metadata for 
-│                         solar_flare_project and configuration for tools like black
+├── solar-flare-project    <-
 │
-├── references         <- Data dictionaries, manuals, and all other explanatory materials.
+├── training               <-
+│   ├── history            <-
+│   └── models             <-
 │
-├── reports            <- Generated analysis as HTML, PDF, LaTeX, etc.
-│   └── figures        <- Generated graphics and figures to be used in reporting
+├── reports                <-
+│   ├── figures            <-
+│   └── results            <-
 │
-├── requirements.txt   <- The requirements file for reproducing the analysis environment, e.g.
-│                         generated with `pip freeze > requirements.txt`
-│
-├── setup.cfg          <- Configuration file for flake8
-│
-└── solar_flare_project   <- Source code for use in this project.
-    │
-    ├── __init__.py             <- Makes solar_flare_project a Python module
-    │
-    ├── config.py               <- Store useful variables and configuration
-    │
-    ├── dataset.py              <- Scripts to download or generate data
-    │
-    ├── features.py             <- Code to create features for modeling
-    │
-    ├── modeling                
-    │   ├── __init__.py 
-    │   ├── predict.py          <- Code to run model inference with trained models          
-    │   └── train.py            <- Code to train models
-    │
-    └── plots.py                <- Code to create visualizations
 ```
 
 --------
 
-=======
 # solar-flare-project
->>>>>>> 175cd638837bcf277ff5b214a8adb30bef132106
-
-# Data Directory
 
 ## Source
 The dataset used for this project is the SWAN-SF solar flare dataset.  
 Original repository: [https://github.com/samresume/Cleaned-SWANSF-Dataset](https://github.com/samresume/Cleaned-SWANSF-Dataset)
 
 ## Local Setup
-Download the data and place it in: \solar-flare-project\data\raw
+Download the dataset and place it in: \solar-flare-project\data\raw
