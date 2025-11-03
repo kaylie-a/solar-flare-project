@@ -1,0 +1,11 @@
+Time Series Transformer Encoder Summary
+Backbone: TimeSeriesTransformerModel
+d_model: 64
+Encoder Layers: 1
+Attention Heads: 8
+Dropout: 0.6
+Feedforward Dim: 128
+Activation: relu
+Total Params: 135,298
+Trainable Params: 127,490
+Non-Trainable Params: 7,808
