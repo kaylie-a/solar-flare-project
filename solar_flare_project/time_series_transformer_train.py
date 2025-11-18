@@ -15,7 +15,7 @@ from sklearn.metrics import precision_score, recall_score, f1_score, confusion_m
 # TODO: Add time-series data shuffling?
 
 # Encoder part of the Time-Series Transformer
-def time_series_encoder(input_shape, num_classes=2, num_layers=4):
+def time_series_encoder(input_shape, num_layers=4, num_classes=2):
 
     # Normalize input layer
     inputs = tf.Input(input_shape)
@@ -83,7 +83,8 @@ def calc_tss(y_true, predictions):
 os.makedirs(MODELS_DIR, exist_ok=True)
 os.makedirs(HISTORY_DIR, exist_ok=True)
 
-iteration = 3
+iteration = 4
+num_layers = 1
 output_file = open(f"{RESULTS_DIR}/output_{iteration}.txt", "w")
 
 # Training Partitions
@@ -100,7 +101,7 @@ for i in range(NUM_PARTITIONS):
     x_train = reshape_data(x_train)
 
     # Create Time Series Transformer model
-    model = time_series_encoder((NUM_TIMESTEPS, NUM_FEATURES))
+    model = time_series_encoder((NUM_TIMESTEPS, NUM_FEATURES), num_layers)
     model.summary()
 
     # Test on different partitions
@@ -123,7 +124,7 @@ for i in range(NUM_PARTITIONS):
         history = model.fit(
             x_train, 
             y_train, 
-            epochs=30,
+            epochs=5,
             batch_size=32, 
             validation_data=(x_val, y_val),
             verbose=1
