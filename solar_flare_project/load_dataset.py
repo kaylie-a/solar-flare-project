@@ -143,9 +143,6 @@ def split_val_test(x_testing, y_testing):
     x_test = x_testing[test_indices, :, :]
     y_test = y_testing[test_indices]
 
-    # Print class distribution
-    print_partition_info(x_val, y_val, x_test, y_test)
-
     return x_val, y_val, x_test, y_test
 
 # Reshape data for the transformer (batch_size, time_steps, features)

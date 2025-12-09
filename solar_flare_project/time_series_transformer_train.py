@@ -5,14 +5,11 @@ from plot_graphs import plot_confusion_matrix
 import numpy as np
 import os
 import json
-import random
 import matplotlib.pyplot as plt
 
 import tensorflow.keras as tf
 from sklearn.metrics import precision_score, recall_score, f1_score, confusion_matrix
 
-
-# TODO: Add time-series data shuffling?
 
 # Encoder part of the Time-Series Transformer
 def time_series_encoder(input_shape, num_layers=4, num_classes=2):
@@ -83,8 +80,10 @@ def calc_tss(y_true, predictions):
 os.makedirs(MODELS_DIR, exist_ok=True)
 os.makedirs(HISTORY_DIR, exist_ok=True)
 
+partitions_dir = PARTITIONS_DIR + '/processed'
+
 iteration = 4
-num_layers = 1
+num_layers = 4
 output_file = open(f"{RESULTS_DIR}/output_{iteration}.txt", "w")
 
 # Training Partitions
@@ -93,7 +92,7 @@ for i in range(NUM_PARTITIONS):
     print('=====================================================================')
 
     # Load training data
-    current_train = np.load(f'{PARTITIONS_DIR}/train{i + 1}_test1.npz')
+    current_train = np.load(f'{partitions_dir}/train{i + 1}_test1.npz')
     x_train = current_train['x_train']
     y_train = current_train['y_train']
     
@@ -106,8 +105,8 @@ for i in range(NUM_PARTITIONS):
 
     # Test on different partitions
     for j in range(NUM_PARTITIONS):
-        # Load testing partition
-        current_test = np.load(f'{PARTITIONS_DIR}/train{i + 1}_test{j + 1}.npz')
+        # Load testing data from current partition
+        current_test = np.load(f'{partitions_dir}/train{i + 1}_test{j + 1}.npz')
         x_testing = current_test['x_test']
         y_testing = current_test['y_test']
         
@@ -124,7 +123,7 @@ for i in range(NUM_PARTITIONS):
         history = model.fit(
             x_train, 
             y_train, 
-            epochs=5,
+            epochs=30,
             batch_size=32, 
             validation_data=(x_val, y_val),
             verbose=1
