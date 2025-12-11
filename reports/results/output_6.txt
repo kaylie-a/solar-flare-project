@@ -1,0 +1,1 @@
+Pair 1:1 - Loss: 0.2653, Accuracy: 0.8971, Precision: 0.9152, Recall: 0.8971, F1-Score: 0.8967, TSS: 0.8066

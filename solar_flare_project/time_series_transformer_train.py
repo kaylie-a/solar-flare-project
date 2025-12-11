@@ -7,65 +7,109 @@ import os
 import json
 import matplotlib.pyplot as plt
 
-import tensorflow.keras as tf
+import tensorflow as tf
+import tensorflow.keras as tfk
+from tensorflow.keras.models import Model
+from tensorflow.keras.regularizers import l2
+from tensorflow.keras.layers import MultiHeadAttention, LayerNormalization, Dropout, Dense, Add, GlobalMaxPooling1D, GlobalAveragePooling1D, Concatenate
 from sklearn.metrics import precision_score, recall_score, f1_score, confusion_matrix
 
 
 # Encoder part of the Time-Series Transformer
-def time_series_encoder(input_shape, num_layers=4, num_classes=2):
-
+def time_series_encoder(num_layers, dropout):
     # Normalize input layer
-    inputs = tf.Input(input_shape)
-    x = tf.layers.LayerNormalization(epsilon=0.000001)(inputs)
+    input_shape = (NUM_TIMESTEPS, NUM_FEATURES)
+    inputs = tfk.Input(input_shape)
+    x = LayerNormalization(epsilon=0.000001)(inputs)
     
-    for i in range(num_layers):
+    # Positional Encoding
+    pos = tf.linspace(0.0, 1.0, NUM_TIMESTEPS)[:, tf.newaxis]
+    i = tf.range(NUM_FEATURES, dtype=tf.float32)[tf.newaxis, :]
+
+    # Even numbered i: sin(position * 10000^(-2i/num_features))
+    # Odd numbered i:  cos(position * 10000^(-2i/num_features))
+    frequency = 1 / tf.pow(10000, (2 * tf.floor(i / 2)) / NUM_FEATURES)
+    positions = tf.where(
+        tf.cast(i, tf.int32) % 2 == 0,
+        tf.sin(pos * frequency),    # Even
+        tf.cos(pos * frequency)     # Odd
+    )
+
+    # Add back to input
+    x = x + positions
+
+    # Encoder block
+    for layer in range(num_layers):
         # Attention unit
-        attention_unit = tf.layers.MultiHeadAttention(
-            num_heads=8,
-            key_dim=64,
-            dropout=0.1,
-            name=f'attention_unit_{i}'
-            )(x, x)
-        attention_unit = tf.layers.Dropout(0.1)(attention_unit)
+        attention_unit = MultiHeadAttention(
+            num_heads=4,
+            key_dim=128,
+            dropout=dropout,
+            name=f'attention_unit_{layer}'
+        )(x, x)
 
         # Residual block (add input to previous block)
-        attention_unit = tf.layers.LayerNormalization(
+        x = Add()([x, attention_unit])
+        x = LayerNormalization(
             epsilon=0.000001,
-            name=f'attention_normalize_{i}'
-            )(attention_unit + x)
-        attention_unit = tf.layers.ReLU(
-            name=f'attention_relu_{i}'
-            )(attention_unit)
+            name=f'add_attention_{layer}'
+        )(x)
     
         # Feed-Forward Network
-        ffn_unit = tf.layers.Dense(
+        ffn_unit = Dense(
             128, 
             activation='relu', 
-            name=f'ffn_dense_{i}'
-            )(attention_unit)
-        ffn_unit = tf.layers.Dropout(
-            0.6,
-            name=f'ffn_dropout_{i}'
-            )(ffn_unit)
-
-        x = ffn_unit
+            kernel_regularizer=l2(0.0001),
+            name=f'ffn_dense_{layer}'
+        )(x)
+        ffn_unit = Dropout(
+            dropout,
+            name=f'ffn_dropout_{layer}'
+        )(ffn_unit)
+        ffn_unit = Dense(
+            NUM_FEATURES,
+            kernel_regularizer=l2(0.0001),
+            name=f'ffn_features_{layer}'
+        )(ffn_unit)
+        
+        # Add input back again
+        x = Add()([x, ffn_unit])
+        x = LayerNormalization(
+            epsilon=0.000001,
+            name=f'add_fnn_normalize_{layer}'
+        )(x)
 
     # Apply pooling to condense
-    x = tf.layers.GlobalMaxPooling1D()(x)
+    x = Concatenate()([
+        GlobalAveragePooling1D()(x),
+        GlobalMaxPooling1D()(x)
+    ])
 
-    # Add and normalize before output
-    x = tf.layers.LayerNormalization(epsilon=0.000001)(x)
-    output = tf.layers.Dense(num_classes, activation='softmax')(x)
+    # Add and normalize before output layer
+    x = LayerNormalization(
+        epsilon=0.000001,
+        name=f'norm_output'
+    )(x)
+    output = Dense(
+        2, 
+        activation='softmax',
+        name=f'out_softmax'
+    )(x)
     
-    # Create and compile model
-    encoder_model = tf.Model(inputs, output)
+    encoder_model = Model(inputs, output)
+
+    # Freeze the last few layers (until FFN)
+    for layer in encoder_model.layers[:-1]:
+        layer.trainable = False
+
     encoder_model.compile(
-        optimizer=tf.optimizers.Adam(learning_rate=0.0001),
+        optimizer=tfk.optimizers.Adam(learning_rate=0.0001),
         loss='sparse_categorical_crossentropy',
         metrics=['accuracy']
-        )
+    )
     
     return encoder_model
+
 
 # Calculate TSS Score
 def calc_tss(y_true, predictions):
@@ -80,14 +124,16 @@ def calc_tss(y_true, predictions):
 os.makedirs(MODELS_DIR, exist_ok=True)
 os.makedirs(HISTORY_DIR, exist_ok=True)
 
-partitions_dir = PARTITIONS_DIR + '/processed'
+iteration  = 6
+num_layers = 3
+dropout    = 0.1
+num_epochs = 10
 
-iteration = 4
-num_layers = 4
+partitions_dir = PARTITIONS_DIR + '/processed'
 output_file = open(f"{RESULTS_DIR}/output_{iteration}.txt", "w")
 
 # Training Partitions
-for i in range(NUM_PARTITIONS):
+for i in range(1):
     print(f'\nTraining Partition {i + 1}')
     print('=====================================================================')
 
@@ -100,11 +146,11 @@ for i in range(NUM_PARTITIONS):
     x_train = reshape_data(x_train)
 
     # Create Time Series Transformer model
-    model = time_series_encoder((NUM_TIMESTEPS, NUM_FEATURES), num_layers)
+    model = time_series_encoder(num_layers, dropout)
     model.summary()
 
-    # Test on different partitions
-    for j in range(NUM_PARTITIONS):
+    # Testing Partitions
+    for j in range(1):
         # Load testing data from current partition
         current_test = np.load(f'{partitions_dir}/train{i + 1}_test{j + 1}.npz')
         x_testing = current_test['x_test']
@@ -123,9 +169,9 @@ for i in range(NUM_PARTITIONS):
         history = model.fit(
             x_train, 
             y_train, 
-            epochs=30,
+            epochs=num_epochs,
             batch_size=32, 
-            validation_data=(x_val, y_val),
+            validation_data=(x_testing, y_testing),
             verbose=1
         )
 
