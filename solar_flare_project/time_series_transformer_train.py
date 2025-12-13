@@ -1,6 +1,6 @@
 from config import PARTITIONS_DIR, MODELS_DIR, HISTORY_DIR, RESULTS_DIR, NUM_PARTITIONS, NUM_TIMESTEPS, NUM_FEATURES
-from load_dataset import print_partition_info, split_val_test, reshape_data
-from plot_graphs import plot_confusion_matrix
+from load_dataset import split_val_test, reshape_data
+from plot_graphs import plot_confusion_matrix, plot_history
 
 import numpy as np
 import os
@@ -14,6 +14,20 @@ from tensorflow.keras.regularizers import l2
 from tensorflow.keras.layers import MultiHeadAttention, LayerNormalization, Dropout, Dense, Add, GlobalMaxPooling1D, GlobalAveragePooling1D, Concatenate
 from sklearn.metrics import precision_score, recall_score, f1_score, confusion_matrix
 
+# =====================================================================
+
+os.makedirs(MODELS_DIR, exist_ok=True)
+os.makedirs(HISTORY_DIR, exist_ok=True)
+
+iteration  = 12
+num_layers = 3
+dropout    = 0.1
+num_epochs = 20
+
+partitions_dir = PARTITIONS_DIR + '/processed'
+output_file = open(f'{RESULTS_DIR}/output_{iteration}.txt', 'a')
+
+# =====================================================================
 
 # Encoder part of the Time-Series Transformer
 def time_series_encoder(num_layers, dropout):
@@ -23,11 +37,12 @@ def time_series_encoder(num_layers, dropout):
     x = LayerNormalization(epsilon=0.000001)(inputs)
     
     # Positional Encoding
-    pos = tf.linspace(0.0, 1.0, NUM_TIMESTEPS)[:, tf.newaxis]
-    i = tf.range(NUM_FEATURES, dtype=tf.float32)[tf.newaxis, :]
+    pos = tf.linspace(0.0, 1.0, NUM_TIMESTEPS)[:, tf.newaxis]       # Timesteps
+    i = tf.range(NUM_FEATURES, dtype=tf.float32)[tf.newaxis, :]     # Features
 
-    # Even numbered i: sin(position * 10000^(-2i/num_features))
-    # Odd numbered i:  cos(position * 10000^(-2i/num_features))
+    # d_model = num_features
+    # Even numbered i: sin(position / 10000^(2i/d_model))
+    # Odd numbered i:  cos(position / 10000^(2i/d_model))   => i + 1
     frequency = 1 / tf.pow(10000, (2 * tf.floor(i / 2)) / NUM_FEATURES)
     positions = tf.where(
         tf.cast(i, tf.int32) % 2 == 0,
@@ -98,12 +113,12 @@ def time_series_encoder(num_layers, dropout):
     
     encoder_model = Model(inputs, output)
 
-    # Freeze the last few layers (until FFN)
-    for layer in encoder_model.layers[:-1]:
+    # Freeze layers after FFN
+    for layer in encoder_model.layers[:-4]:
         layer.trainable = False
 
     encoder_model.compile(
-        optimizer=tfk.optimizers.Adam(learning_rate=0.0001),
+        optimizer=tfk.optimizers.Adam(learning_rate=0.00001),
         loss='sparse_categorical_crossentropy',
         metrics=['accuracy']
     )
@@ -121,85 +136,81 @@ def calc_tss(y_true, predictions):
 
 # =====================================================================
 
-os.makedirs(MODELS_DIR, exist_ok=True)
-os.makedirs(HISTORY_DIR, exist_ok=True)
+def main():
+    # Training Partitions
+    for i in range(0, 1):
+        print(f'\nTraining Partition {i + 1}')
+        print('=====================================================================')
 
-iteration  = 6
-num_layers = 3
-dropout    = 0.1
-num_epochs = 10
-
-partitions_dir = PARTITIONS_DIR + '/processed'
-output_file = open(f"{RESULTS_DIR}/output_{iteration}.txt", "w")
-
-# Training Partitions
-for i in range(1):
-    print(f'\nTraining Partition {i + 1}')
-    print('=====================================================================')
-
-    # Load training data
-    current_train = np.load(f'{partitions_dir}/train{i + 1}_test1.npz')
-    x_train = current_train['x_train']
-    y_train = current_train['y_train']
-    
-    # Preprocess and reshape training data
-    x_train = reshape_data(x_train)
-
-    # Create Time Series Transformer model
-    model = time_series_encoder(num_layers, dropout)
-    model.summary()
-
-    # Testing Partitions
-    for j in range(1):
-        # Load testing data from current partition
-        current_test = np.load(f'{partitions_dir}/train{i + 1}_test{j + 1}.npz')
-        x_testing = current_test['x_test']
-        y_testing = current_test['y_test']
+        # Load training data
+        current_train = np.load(f'{partitions_dir}/train{i + 1}.npz')
+        x_train = current_train['x_train']
+        y_train = current_train['y_train']
         
-        # Shuffle and split testing into two sets without reusing values
-        x_val, y_val, x_test, y_test = split_val_test(x_testing, y_testing)
+        # Preprocess and reshape training data
+        x_train = reshape_data(x_train)
 
-        # Reshape validation and testing data
-        x_val = reshape_data(x_val)
-        x_test = reshape_data(x_test)
+        # Create Time Series Transformer model
+        model = time_series_encoder(num_layers, dropout)
+        model.summary()
 
-        # Train the model
-        print(f'\nTesting Partition {j + 1}')
-        
-        history = model.fit(
-            x_train, 
-            y_train, 
-            epochs=num_epochs,
-            batch_size=32, 
-            validation_data=(x_testing, y_testing),
-            verbose=1
-        )
+        # Testing Partitions
+        for j in range(NUM_PARTITIONS):
+            # Load testing data from current partition
+            current_test = np.load(f'{partitions_dir}/test{j + 1}.npz')
+            x_testing = current_test['x_test']
+            y_testing = current_test['y_test']
+            
+            # Shuffle and split testing into two sets without reusing values
+            x_val, y_val, x_test, y_test = split_val_test(x_testing, y_testing)
 
-        # Save the model and history
-        model.save(f'{MODELS_DIR}/time_series_model_{i + 1}_{j + 1}.h5')
-        history_output = f'{HISTORY_DIR}/history_{i + 1}_{j + 1}.json'
-        with open(history_output, 'w') as file:
-            json.dump(history.history, file)
+            # Reshape validation and testing data
+            x_val = reshape_data(x_val)
+            x_test = reshape_data(x_test)
 
-        # Evaluate the model
-        predictions = model.predict(x_test)
-        predictions = np.argmax(predictions, axis=1)
-        
-        # Loss and accuracy
-        loss, accuracy = model.evaluate(x_test, y_test)
+            # Train the model
+            print(f'\nTesting Partition {j + 1}')
+            
+            history = model.fit(
+                x_train, 
+                y_train, 
+                epochs=num_epochs,
+                batch_size=32, 
+                validation_data=(x_testing, y_testing),
+                verbose=1
+            )
 
-        # Precision, Recall, F1-Score, TSS
-        precision = precision_score(y_test, predictions, average='weighted')
-        recall = recall_score(y_test, predictions, average='weighted')
-        f1 = f1_score(y_test, predictions, average='weighted')
-        tss = calc_tss(y_test, predictions)
+            # Save the model and history
+            model.save(f'{MODELS_DIR}/time_series_model_{i + 1}_{j + 1}_{iteration}.keras')
+            history_output = f'{HISTORY_DIR}/history_{i + 1}_{j + 1}_{iteration}.json'
+            with open(history_output, 'w') as file:
+                json.dump(history.history, file)
 
-        # Save first confusion matrix
-        if i + 1 == 1 and j + 1 == 1:
+            # Evaluate the model
+            predictions = model.predict(x_test)
+            predictions = np.argmax(predictions, axis=1)
+            
+            # Loss and accuracy
+            loss, accuracy = model.evaluate(x_test, y_test)
+
+            # Precision, Recall, F1-Score, TSS
+            precision = precision_score(y_test, predictions, average='weighted')
+            recall = recall_score(y_test, predictions, average='weighted')
+            f1 = f1_score(y_test, predictions, average='weighted')
+            tss = calc_tss(y_test, predictions)
+            
+            val_accuracy = history.history['val_accuracy']
+            val_loss = history.history['val_loss']
+
+            # Save confusion graphs
             plot_confusion_matrix(y_test, predictions, i + 1, j + 1, iteration)
-        
-        print(f'Loss: {loss:.4f}, Accuracy: {accuracy:.4f}, Precision: {precision:.4f}, Recall: {recall:.4f}, F1-Score: {f1:.4f}, TSS: {tss:.4f}')
+            plot_history('Accuracy', accuracy, val_accuracy, i + 1, j + 1, iteration)
+            plot_history('Loss', loss, val_loss, i + 1, j + 1, iteration)
+            
+            print(f'Loss: {loss:.4f}, Accuracy: {accuracy:.4f}, Precision: {precision:.4f}, Recall: {recall:.4f}, F1-Score: {f1:.4f}, TSS: {tss:.4f}')
 
-        # Write to output file
-        output_file.write(f'Pair {i + 1}:{j + 1} - Loss: {loss:.4f}, Accuracy: {accuracy:.4f}, Precision: {precision:.4f}, Recall: {recall:.4f}, F1-Score: {f1:.4f}, TSS: {tss:.4f}\n')
-        
+            # Write to output file
+            output_file.write(f'Pair {i + 1}:{j + 1} - Loss: {loss:.4f}, Accuracy: {accuracy:.4f}, Precision: {precision:.4f}, Recall: {recall:.4f}, F1-Score: {f1:.4f}, TSS: {tss:.4f}\n')
+
+if __name__ == "__main__":
+    main()

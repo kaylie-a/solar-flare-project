@@ -1,6 +1,5 @@
-from config import DATASET_DIR, NUM_PARTITIONS, NUM_TIMESTEPS, FEATURE_NAMES
+from config import DATASET_DIR, NUM_PARTITIONS
 import pickle as pkl
-import matplotlib.pyplot as plt
 import numpy as np
 
 training_dir = DATASET_DIR + '/train'
@@ -57,63 +56,6 @@ def load_data(training_dir=training_dir, testing_dir=testing_dir):
 
     return x_train, y_train, x_test, y_test
 
-# Count class distribution in training and testing labels for each partition
-def count_class_distributions(labels):
-
-    for i in range(NUM_PARTITIONS):
-        # Convert to numpy array
-        labels_np = np.array(labels[i])
-
-        # Count class distributions
-        class_M_count = len(np.where(labels_np == 0)[0])
-        class_X_count = len(np.where(labels_np == 1)[0])
-
-        print(f'Partition {i + 1} - Class M: {class_M_count}, Class X: {class_X_count}')
-
-# Count class distribution for a single partition
-def count_class_distribution_single(labels):
-
-    class_M_count = len(np.where(labels == 0)[0])
-    class_X_count = len(np.where(labels == 1)[0])
-
-    print(f'Class M: {class_M_count}, Class X: {class_X_count}')
-
-# Display info about the dataset
-def print_dataset_info(x_train, y_train, x_test, y_test):
-    
-    # Print dataset sizes for each partition
-    print('\t\t\tPartitions 1-5 - num samples')
-    print('-------------------------------------------------------')
-    print('x_train (data):\t\t', len(x_train[0]), len(x_train[1]), len(x_train[2]), len(x_train[3]), len(x_train[4]))
-    print('y_train (labels):\t', len(y_train[0]), len(y_train[1]), len(y_train[2]), len(y_train[3]), len(y_train[4]))
-    print('-------------------------------------------------------')
-    print('x_test (data):\t\t', len(x_test[0]), len(x_test[1]), len(x_test[2]), len(x_test[3]), len(x_test[4]))
-    print('y_test (labels):\t', len(y_test[0]), len(y_test[1]), len(y_test[2]), len(y_test[3]), len(y_test[4]))
-
-    # Count class label distributions
-    print('\n----- Training Class Distribution -----')
-    count_class_distributions(y_train)
-
-    print('\n----- Testing Class Distribution -----')
-    count_class_distributions(y_test)
-
-# Display info for a specific partition pair
-def print_partition_info(x_train, y_train, x_test, y_test):
-
-    print('\t\t\tNum samples')
-    print('x_train (data):\t\t', len(x_train))
-    print('y_train (labels):\t', len(y_train))
-    print('-------------------------------------------------------')
-    print('x_test (data):\t\t', len(x_test))
-    print('y_test (labels):\t', len(y_test))
-
-    # Count class label distributions
-    print('\n----- Training Class Distribution -----')
-    count_class_distribution_single(y_train)
-
-    print('\n----- Testing Class Distribution -----')
-    count_class_distribution_single(y_test)
-
 # Split testing set into validation and testing
 def split_val_test(x_testing, y_testing):
 
@@ -148,7 +90,3 @@ def split_val_test(x_testing, y_testing):
 # Reshape data for the transformer (batch_size, time_steps, features)
 def reshape_data(x):
     return x.reshape((x.shape[0], x.shape[1], x.shape[2]))
-
-# Example - print info
-#x_train, y_train, x_test, y_test = load_data()
-#print_dataset_info(x_train, y_train, x_test, y_test)

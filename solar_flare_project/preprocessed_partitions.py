@@ -81,22 +81,18 @@ for partition in range(NUM_PARTITIONS):
     y_train.append(x_upsample_y)
     print(f'{len(x_train[partition])} new samples')
 
-# Save partition pairs with training:testing
-# Training partitions
+# Save processed data
 for i in range(NUM_PARTITIONS):
-    # Testing partitions
-    for j in range(NUM_PARTITIONS):
-        # Create partition pair
-        x_train_pair = x_train[i]
-        y_train_pair = y_train[i]
-        x_test_pair = x_test[j]
-        y_test_pair = y_test[j]
+    # Training partition
+    output_dir = f'{partitions_dir}/train{i + 1}.npz'
+    np.savez(output_dir,
+        x_train=x_train[i],
+        y_train=y_train[i],
+    )
 
-        # Save pair to directory
-        output_dir = f'{partitions_dir}/train{i + 1}_test{j + 1}.npz'
-        np.savez(output_dir,
-                 x_train=x_train_pair,
-                 y_train=y_train_pair,
-                 x_test=x_test_pair,
-                 y_test=y_test_pair
-        )
+    # Testing partition
+    output_dir = f'{partitions_dir}/test{i + 1}.npz'
+    np.savez(output_dir,
+        x_test=x_test[i],
+        y_test=y_test[i],
+    )
