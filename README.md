@@ -1,33 +1,43 @@
-# SOLAR-FLARE-PROJECT
+# SOLAR FLARE PROJECT
 
-Solar flare prediction using time-series transformers
+Using a cleaned dataset with solar flare data, we analyzed the performance of two Transformer architectures in predicting solar flare levels across various time periods. Between a baseline time-series and PatchTST encoder, we compared how well each were able to analyze numerical data.
 
 ## Project Organization
 
 ```
-├── LICENSE                
+├── LICENSE
 │
 ├── README.md
 │
-├── requirements.txt       <- Install required libraries for environment
+├── requirements.txt                   <- Install required libraries for environment
 │
-├── notebooks              <-
+├── notebooks                          <- Code for running PatchTST
 │
-├── solar-flare-project    <-
+├── solar-flare-project                <- Code for running baseline Time-Series
+│   ├── base_time_series.py            <- Run training
+│   ├── config.py                      <- Configure local folder paths
+│   ├── load_dataset.py                <- Functions for working with the dataset
+│   ├── plot_graphs.py                 <- Functions for saving graphs to images
+│   └── preprocessed_partitions.py     <- Resamples unbalanced dataset
 │
-├── training               <-
-│   ├── history            <-
-│   └── models             <-
+├── data\raw                           <- Original dataset
 │
-├── reports                <-
-│   ├── figures            <-
-│   └── results            <-
+├── data_partitions                    <- Partition data after preprocessing (total of 10)
+│   ├── test1.npz                      <- Testing partition 1
+│   ├── train1.npz                     <- Training partition 1
+│   └── . . .
+│
+├── reports                            <- Saved outputs from training runs
+│   ├── figures                        <- Graph images
+│   └── results                        <- .txt files with evaluation metrics
+│
+├── training                           <- Saved outputs from training runs
+│   ├── history                        <- Accuracy and loss data
+│   └── models                         <- .keras models
 │
 ```
 
 --------
-
-# solar-flare-project
 
 ## Source
 The dataset used for this project is the SWAN-SF solar flare dataset.  

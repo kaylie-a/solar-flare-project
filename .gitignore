@@ -4,3 +4,4 @@ data/*
 solar_flare_project/__pycache__/*
 data_partitions/*
 training/*
+reports/*

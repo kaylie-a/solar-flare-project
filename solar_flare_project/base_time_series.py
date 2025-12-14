@@ -1,4 +1,4 @@
-from config import PARTITIONS_DIR, MODELS_DIR, HISTORY_DIR, RESULTS_DIR, NUM_PARTITIONS, NUM_TIMESTEPS, NUM_FEATURES
+from config import PARTITIONS_DIR, MODELS_DIR, HISTORY_DIR, FIGURES_DIR, RESULTS_DIR, NUM_PARTITIONS, NUM_TIMESTEPS, NUM_FEATURES
 from load_dataset import split_val_test, reshape_data
 from plot_graphs import plot_confusion_matrix, plot_history
 
@@ -13,19 +13,6 @@ from tensorflow.keras.models import Model
 from tensorflow.keras.regularizers import l2
 from tensorflow.keras.layers import MultiHeadAttention, LayerNormalization, Dropout, Dense, Add, GlobalMaxPooling1D, GlobalAveragePooling1D, Concatenate
 from sklearn.metrics import precision_score, recall_score, f1_score, confusion_matrix
-
-# =====================================================================
-
-os.makedirs(MODELS_DIR, exist_ok=True)
-os.makedirs(HISTORY_DIR, exist_ok=True)
-
-iteration  = 12
-num_layers = 3
-dropout    = 0.1
-num_epochs = 20
-
-partitions_dir = PARTITIONS_DIR + '/processed'
-output_file = open(f'{RESULTS_DIR}/output_{iteration}.txt', 'a')
 
 # =====================================================================
 
@@ -137,13 +124,24 @@ def calc_tss(y_true, predictions):
 # =====================================================================
 
 def main():
+    os.makedirs(MODELS_DIR, exist_ok=True)
+    os.makedirs(HISTORY_DIR, exist_ok=True)
+    os.makedirs(FIGURES_DIR, exist_ok=True)
+
+    iteration  = 13
+    num_layers = 3
+    dropout    = 0.1
+    num_epochs = 20
+
+    output_file = open(f'{RESULTS_DIR}/output_{iteration}.txt', 'a')
+
     # Training Partitions
-    for i in range(0, 1):
+    for i in range(NUM_PARTITIONS):
         print(f'\nTraining Partition {i + 1}')
         print('=====================================================================')
 
         # Load training data
-        current_train = np.load(f'{partitions_dir}/train{i + 1}.npz')
+        current_train = np.load(f'{PARTITIONS_DIR}/train{i + 1}.npz')
         x_train = current_train['x_train']
         y_train = current_train['y_train']
         
@@ -157,7 +155,7 @@ def main():
         # Testing Partitions
         for j in range(NUM_PARTITIONS):
             # Load testing data from current partition
-            current_test = np.load(f'{partitions_dir}/test{j + 1}.npz')
+            current_test = np.load(f'{PARTITIONS_DIR}/test{j + 1}.npz')
             x_testing = current_test['x_test']
             y_testing = current_test['y_test']
             
@@ -176,7 +174,7 @@ def main():
                 y_train, 
                 epochs=num_epochs,
                 batch_size=32, 
-                validation_data=(x_testing, y_testing),
+                validation_data=(x_val, y_val),
                 verbose=1
             )
 
@@ -199,13 +197,15 @@ def main():
             f1 = f1_score(y_test, predictions, average='weighted')
             tss = calc_tss(y_test, predictions)
             
+            training_accuracy = history.history['accuracy']
+            training_loss = history.history['loss']
             val_accuracy = history.history['val_accuracy']
             val_loss = history.history['val_loss']
 
             # Save confusion graphs
             plot_confusion_matrix(y_test, predictions, i + 1, j + 1, iteration)
-            plot_history('Accuracy', accuracy, val_accuracy, i + 1, j + 1, iteration)
-            plot_history('Loss', loss, val_loss, i + 1, j + 1, iteration)
+            plot_history('Accuracy', training_accuracy, val_accuracy, i + 1, j + 1, iteration)
+            plot_history('Loss', training_loss, val_loss, i + 1, j + 1, iteration)
             
             print(f'Loss: {loss:.4f}, Accuracy: {accuracy:.4f}, Precision: {precision:.4f}, Recall: {recall:.4f}, F1-Score: {f1:.4f}, TSS: {tss:.4f}')
 

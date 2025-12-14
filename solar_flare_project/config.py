@@ -1,10 +1,10 @@
 # Global variables/constants
-DATASET_DIR = 'C:/GitHub/solar-flare-project/data/raw/Cleaned SWANSF Dataset'
-PARTITIONS_DIR = 'C:/GitHub/solar-flare-project/data_partitions'
-MODELS_DIR = 'C:/GitHub/solar-flare-project/training/models'
-HISTORY_DIR = 'C:/GitHub/solar-flare-project/training/history'
-FIGURES_DIR = 'C:/GitHub/solar-flare-project/reports/figures/timeseries_base'
-RESULTS_DIR = 'C:/GitHub/solar-flare-project/reports/results'
+DATASET_DIR = 'data/raw/Cleaned SWANSF Dataset'
+PARTITIONS_DIR = 'data_partitions'
+MODELS_DIR = 'training/models'
+HISTORY_DIR = 'training/history'
+FIGURES_DIR = 'reports/figures/timeseries_base'
+RESULTS_DIR = 'reports/results'
 
 NUM_PARTITIONS = 5
 NUM_TIMESTEPS = 60

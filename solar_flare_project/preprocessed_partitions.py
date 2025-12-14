@@ -6,10 +6,8 @@ from imblearn.over_sampling import SMOTE
 from config import NUM_PARTITIONS, PARTITIONS_DIR
 from load_dataset import load_data
 
-partitions_dir = PARTITIONS_DIR + '/processed'
-
 x_train_original, y_train_original, x_test, y_test = load_data()
-os.makedirs(partitions_dir, exist_ok=True)
+os.makedirs(PARTITIONS_DIR, exist_ok=True)
 
 # =======================
 # Data pre-processing:
@@ -84,14 +82,14 @@ for partition in range(NUM_PARTITIONS):
 # Save processed data
 for i in range(NUM_PARTITIONS):
     # Training partition
-    output_dir = f'{partitions_dir}/train{i + 1}.npz'
+    output_dir = f'{PARTITIONS_DIR}/train{i + 1}.npz'
     np.savez(output_dir,
         x_train=x_train[i],
         y_train=y_train[i],
     )
 
     # Testing partition
-    output_dir = f'{partitions_dir}/test{i + 1}.npz'
+    output_dir = f'{PARTITIONS_DIR}/test{i + 1}.npz'
     np.savez(output_dir,
         x_test=x_test[i],
         y_test=y_test[i],
