@@ -30,7 +30,7 @@ Using a cleaned dataset with solar flare data, we analyzed the performance of tw
 │
 ├── reports                            <- Saved outputs from training runs
 │   ├── figures                        <- Graph images
-│   └── results                        <- .txt files with evaluation metrics
+│   └── results                        <- .txt and .csv files with evaluation metrics
 │
 ├── training                           <- Saved outputs from training runs
 │   ├── history                        <- Accuracy and loss data

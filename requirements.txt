@@ -2,9 +2,11 @@ jupyterlab
 matplotlib
 notebook
 numpy
-pickle
 tensorflow
 scikit-learn
 simplejson
 seaborn
 imblearn
+transformers
+datasets
+evaluate
