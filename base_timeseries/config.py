@@ -3,7 +3,7 @@ DATASET_DIR = 'data/raw/Cleaned SWANSF Dataset'
 PARTITIONS_DIR = 'data_partitions'
 MODELS_DIR = 'training/models'
 HISTORY_DIR = 'training/history'
-FIGURES_DIR = 'reports/figures/timeseries_base'
+FIGURES_DIR = 'reports/figures'
 RESULTS_DIR = 'reports/results'
 
 NUM_PARTITIONS = 5

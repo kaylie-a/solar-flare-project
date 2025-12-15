@@ -1,7 +1,5 @@
 venv/*
 .venv/*
-data/*
-solar_flare_project/__pycache__/*
-data_partitions/*
-training/*
-reports/*
+data/raw/*
+base_timeseries/__pycache__/*
+data_partitions/*.npz

@@ -14,7 +14,9 @@ from tensorflow.keras.regularizers import l2
 from tensorflow.keras.layers import MultiHeadAttention, LayerNormalization, Dropout, Dense, Add, GlobalMaxPooling1D, GlobalAveragePooling1D, Concatenate
 from sklearn.metrics import precision_score, recall_score, f1_score, confusion_matrix
 
+
 # =====================================================================
+
 
 # Encoder part of the Time-Series Transformer
 def time_series_encoder(num_layers, dropout):
@@ -121,14 +123,16 @@ def calc_tss(y_true, predictions):
     tss = (true_pos / (true_pos + false_neg)) - (false_pos / (false_pos + true_neg))
     return tss
 
+
 # =====================================================================
+
 
 def main():
     os.makedirs(MODELS_DIR, exist_ok=True)
     os.makedirs(HISTORY_DIR, exist_ok=True)
     os.makedirs(FIGURES_DIR, exist_ok=True)
 
-    iteration  = 13
+    iteration  = 14
     num_layers = 3
     dropout    = 0.1
     num_epochs = 20
@@ -136,7 +140,7 @@ def main():
     output_file = open(f'{RESULTS_DIR}/output_{iteration}.txt', 'a')
 
     # Training Partitions
-    for i in range(NUM_PARTITIONS):
+    for i in range(0, 2):
         print(f'\nTraining Partition {i + 1}')
         print('=====================================================================')
 
