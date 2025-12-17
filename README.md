@@ -12,7 +12,7 @@ Using a cleaned dataset with solar flare data, we analyzed the performance of tw
 ├── requirements.txt                   <- Install required libraries for environment
 │
 ├── pathTST                            <- Code for running PatchTST
-│   └── 0_5_JL_patchTST.ipynb
+│   └── *.ipynb
 │
 ├── base_timeseries                    <- Code for running baseline Time-Series
 │   ├── base_time_series.py            <- Run training
