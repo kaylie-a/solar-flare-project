@@ -18,14 +18,14 @@ from sklearn.metrics import precision_score, recall_score, f1_score, confusion_m
 # =====================================================================
 
 
-# Encoder part of the Time-Series Transformer
+# Encoder-only Classifier
 def time_series_encoder(num_layers, dropout):
     # Normalize input layer
     input_shape = (NUM_TIMESTEPS, NUM_FEATURES)
     inputs = tfk.Input(input_shape)
     x = LayerNormalization(epsilon=0.000001)(inputs)
     
-    # Positional Encoding
+    # Add positional encoding to timesteps in examples
     pos = tf.linspace(0.0, 1.0, NUM_TIMESTEPS)[:, tf.newaxis]       # Timesteps
     i = tf.range(NUM_FEATURES, dtype=tf.float32)[tf.newaxis, :]     # Features
 
@@ -132,7 +132,7 @@ def main():
     os.makedirs(HISTORY_DIR, exist_ok=True)
     os.makedirs(FIGURES_DIR, exist_ok=True)
 
-    iteration  = 14
+    iteration  = 16
     num_layers = 3
     dropout    = 0.1
     num_epochs = 20
@@ -140,7 +140,7 @@ def main():
     output_file = open(f'{RESULTS_DIR}/output_{iteration}.txt', 'a')
 
     # Training Partitions
-    for i in range(0, 2):
+    for i in range(NUM_PARTITIONS):
         print(f'\nTraining Partition {i + 1}')
         print('=====================================================================')
 
@@ -150,11 +150,7 @@ def main():
         y_train = current_train['y_train']
         
         # Preprocess and reshape training data
-        x_train = reshape_data(x_train)
-
-        # Create Time Series Transformer model
-        model = time_series_encoder(num_layers, dropout)
-        model.summary()
+        x_train = reshape_data(x_train)        
 
         # Testing Partitions
         for j in range(NUM_PARTITIONS):
@@ -173,6 +169,10 @@ def main():
             # Train the model
             print(f'\nTesting Partition {j + 1}')
             
+            # Create Time Series Transformer model for each training
+            model = time_series_encoder(num_layers, dropout)
+            #model.summary()
+
             history = model.fit(
                 x_train, 
                 y_train, 
@@ -216,5 +216,5 @@ def main():
             # Write to output file
             output_file.write(f'Pair {i + 1}:{j + 1} - Loss: {loss:.4f}, Accuracy: {accuracy:.4f}, Precision: {precision:.4f}, Recall: {recall:.4f}, F1-Score: {f1:.4f}, TSS: {tss:.4f}\n')
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
